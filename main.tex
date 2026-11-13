@@ -1,0 +1,154 @@
+% !TEX program = xelatex
+\documentclass[12pt, a4paper]{report}
+
+% 字體與中文支援
+\usepackage{xeCJK}
+\setCJKmainfont{Microsoft JhengHei} % Windows 預設微軟正黑體，確保可編譯
+\usepackage{geometry}
+\geometry{a4paper, margin=2.54cm}
+
+% 圖表與程式碼套件
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{lipsum}
+
+% 重新定義目錄與標題名稱為繁體中文
+\renewcommand{\contentsname}{目錄}
+\renewcommand{\listfigurename}{圖目錄}
+\renewcommand{\listtablename}{表目錄}
+\renewcommand{\figurename}{圖}
+\renewcommand{\tablename}{表}
+\renewcommand{\lstlistingname}{程式碼}
+\renewcommand{\lstlistlistingname}{程式碼目錄}
+\renewcommand{\chaptername}{第 \thechapter 章}
+
+% 設定 Listings 程式碼排版格式 (具備左側行號)
+\lstset{
+    basicstyle=\ttfamily\small,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=10pt,
+    backgroundcolor=\color{white},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    rulecolor=\color{black},
+    tabsize=4,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{teal},
+    stringstyle=\color{red}
+}
+
+% 封面資訊
+\title{\Huge\textbf{LINE Messaging API 教學文件製作}}
+\author{
+    \Large 班級：資管3A \\
+    \Large 學號：414637305 \\
+    \Large 姓名：蔡竣宇
+}
+\date{\today}
+
+\begin{document}
+
+% 封面與目錄頁
+\maketitle
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+\lstlistoflistings
+\newpage
+
+\pagenumbering{arabic}
+
+% ==================== 第 1 章 ====================
+\chapter{LINE Messaging API 簡介與應用場景}
+\section{技術簡介}
+LINE Messaging API 是一套由 LINE 官方提供的開發工具介面，允許開發者建立客製化的聊天機器人（Chatbot）。透過這套 API，伺服器能夠雙向地與 LINE 使用者進行互動，實現自動化客服、即時通知、甚至互動式遊戲等功能。
+
+\section{常見應用場景}
+透過 webhook 接收使用者的訊息後，系統可以觸發多樣化的服務。為了說明其廣泛的應用，表 \ref{tab:usecases} 列出了目前業界常見的應用情境。
+
+\begin{table}[h]
+\centering
+\caption{LINE Messaging API 應用場景整理}
+\label{tab:usecases}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{領域} & \textbf{應用說明} \\ \hline
+電子商務 & 訂單狀態查詢、推播專屬優惠券、購物車未結帳提醒 \\ \hline
+客戶服務 & 24小時自動化常見問題解答 (FAQ)、轉接真人客服 \\ \hline
+物聯網 (IoT) & 結合 ESP32 進行遠端家電控制與狀態回報 \\ \hline
+\end{tabular}
+\end{table}
+
+\newpage
+% ==================== 第 2 章 ====================
+\chapter{LINE Developers 帳號註冊申請與 Channel 建立}
+\section{帳號註冊}
+開發者需要先前往 LINE Developers 官方網站註冊開發者帳號。可以使用一般個人的 LINE 帳號直接綁定登入，完成基本資料的填寫並同意服務條款後，即可進入開發者後台 (Console)。
+
+\section{建立 Provider 與 Channel}
+進入 Console 後，首先需要建立一個 Provider（提供者，通常為公司或專案名稱）。接著在 Provider 底下建立一個新的 Channel，請選擇「Messaging API」類型。
+
+\begin{figure}[h]
+\centering
+% 使用黑色方塊代替截圖，確保沒有圖檔也能編譯成功
+\rule{10cm}{5.5cm} 
+\caption{LINE Developers Channel 建立示意畫面}
+\label{fig:line_console}
+\end{figure}
+
+設定過程中需要填寫 Channel icon、Channel name 以及 Channel description。填寫完畢後點擊 Create 即可完成建立流程。
+
+\newpage
+% ==================== 第 3 章 ====================
+\chapter{Channel Secret 及 Access Token 取得與設定}
+\section{取得憑證資訊}
+為了確保伺服器與 LINE 平台之間的通訊安全，我們需要兩把關鍵的鑰匙：
+\begin{itemize}
+    \item \textbf{Channel Secret}：位於 Basic settings 頁籤下方，主要用於驗證接收到的 Webhook 請求是否真的來自 LINE 官方。
+    \item \textbf{Channel Access Token}：位於 Messaging API 頁籤下方，點擊 Issue 按鈕即可生成。我們的伺服器在主動發送或回覆訊息給使用者時，必須在 HTTP Header 中附上此 Token 作為授權證明。
+\end{itemize}
+
+\section{Webhook 的設定與測試}
+為了讓本機端開發的程式能夠接收來自 LINE 的外部請求，我們可以使用 \texttt{ngrok} 將本機的 Port (例如 8000) 映射到具有 SSL 憑證的公開網址。
+取得 ngrok 的 HTTPS 網址後，將其加上 \texttt{/callback} 路徑，填入 LINE Console 的 Webhook URL 欄位，並點擊 Verify 進行測試。
+
+\newpage
+% ==================== 第 4 章 ====================
+\chapter{範例程式說明}
+\section{LINE Bot 範例程式碼說明}
+本章節展示如何使用 Python 與 Flask 框架實現一個簡單的回聲機器人 (Echo Bot)。此程式碼使用了官方的 \texttt{line-bot-sdk}，能夠接收使用者傳送的文字，並原封不動地回傳給使用者。
+
+\subsection{app.py 解析}
+這段程式碼會在 Port 8000 啟動一個網頁伺服器，並負責驗證 \texttt{X-Line-Signature}，確認簽章無誤後，交由 \texttt{handle\_message} 函式透過 \texttt{ReplyMessageRequest} 進行回覆。
+
+% 匯入外部的 app.py 並加入程式碼目錄
+\lstinputlisting[language=Python, caption={Python app.py 範例}, label={lst:app_py}]{app.py}
+
+\newpage
+% ==================== 第 5 章 ====================
+\chapter{結論}
+透過本文件的引導，我們完成了從 LINE Developers 帳號的註冊、Channel 的建立、重要憑證的獲取，一直到透過 Python 與 Flask 建立 Webhook 伺服器的完整流程。這為未來進階應用，例如結合資料庫、圖文選單 (Rich Menu) 或是 Flex Message 奠定了穩固的基礎。
+
+\newpage
+% ==================== 第 6 章 ====================
+\chapter{本文件 LaTeX 原始碼}
+依照考題要求，本章節將這份 LaTeX 文件的原始碼匯入，展示排版所使用的各項指令與套件配置。
+
+% 匯入自己的 main.tex 並加入程式碼目錄
+\lstinputlisting[language=TeX, caption={main.tex 原始碼}]{main.tex}
+
+\end{document}
